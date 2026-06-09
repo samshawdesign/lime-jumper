@@ -103,11 +103,11 @@ const cloudImg  = new Image(); cloudImg.src  = 'data:image/png;base64,iVBORw0KGg
 // ── Constants ─────────────────────────────────────────────────────────────────
 const PW = 39, PH = 39, PX = 90;   // player size & start x
 const BW = 30, BH = 90;            // bottle size
-const GRAV = 0.28, JV = -10;
+const GRAV_UP = 0.40, GRAV_DOWN = 0.15, JV = -12;
 
 // ── Game state ────────────────────────────────────────────────────────────────
 let gs = 'idle';    // 'idle' | 'playing' | 'gameover'
-let score = 0, hi = 0, spd = 2, tick = 0, spawnIn = 150;
+let score = 0, hi = 0, spd = 4, tick = 0, spawnIn = 100;
 let bgOffset = 0;
 
 const p = { x: PX, y: GY - PH, vy: 0, j: 2 };  // player
@@ -189,7 +189,7 @@ document.addEventListener('webkitfullscreenchange', () => fsBtn.classList.toggle
 
 // ── Game logic ────────────────────────────────────────────────────────────────
 function startGame() {
-  gs = 'playing'; score = 0; spd = 3; tick = 0; spawnIn = 120;
+  gs = 'playing'; score = 0; spd = 4; tick = 0; spawnIn = 100;
   bottles = []; particles = [];
   Object.assign(p, { x: PX, y: GY - PH, vy: 0, j: 2 });
 }
@@ -200,26 +200,26 @@ function spawnBottles() {
     bottles.push({ x: W + 20 + BW + 24, y: GY - BH, bonus: false });
 }
 
-function update() {
+function update(dt60) {
   // Background always scrolls; slower when not in play
-  bgOffset += gs === 'playing' ? spd : 1.5;
+  bgOffset += (gs === 'playing' ? spd : 1.5) * dt60;
 
   if (gs !== 'playing') return;
 
-  tick++;
-  spd   = Math.min(8, 2 + tick * 0.0006);
-  score += spd * 0.01;
+  tick  += dt60;
+  spd    = Math.min(12, 4 + tick * 0.0006);
+  score += spd * 0.01 * dt60;
 
   // Player physics
   const prevBottom = p.y + PH;
-  p.vy += GRAV;
-  p.y  += p.vy;
+  p.vy += (p.vy < 0 ? GRAV_UP : GRAV_DOWN) * dt60;
+  p.y  += p.vy  * dt60;
   if (p.y < 0)         { p.y = 0;       p.vy = 0; }
   if (p.y + PH >= GY)  { p.y = GY - PH; p.vy = 0; p.j = 2; }
 
   // Clouds scroll
   for (const c of clouds) {
-    c.x -= c.dx;
+    c.x -= c.dx * dt60;
     if (c.x + c.cw < 0) {
       const farthest = clouds.reduce((m, cl) => Math.max(m, cl.x + cl.cw), W);
       Object.assign(c, mkCloud(farthest + 60 + Math.random() * 80));
@@ -227,15 +227,16 @@ function update() {
   }
 
   // Obstacle spawn
-  if (--spawnIn <= 0) {
+  spawnIn -= dt60;
+  if (spawnIn <= 0) {
     spawnBottles();
-    spawnIn = Math.max(70, 160 - tick * 0.015) + Math.random() * 70;
+    spawnIn = Math.max(55, 130 - tick * 0.015) + Math.random() * 55;
   }
 
   // Bottle updates + collision
   for (let i = bottles.length - 1; i >= 0; i--) {
     const b = bottles[i];
-    b.x -= spd;
+    b.x -= spd * dt60;
     if (b.x + BW < 0) { bottles.splice(i, 1); continue; }
 
     // Inset hitboxes for fairness
@@ -265,9 +266,10 @@ function update() {
   // Particle physics
   for (let i = particles.length - 1; i >= 0; i--) {
     const pt = particles[i];
-    pt.x += pt.vx; pt.y += pt.vy;
-    pt.vy += 0.13;
-    pt.alpha -= 0.022;
+    pt.x  += pt.vx  * dt60;
+    pt.y  += pt.vy  * dt60;
+    pt.vy += 0.13   * dt60;
+    pt.alpha -= 0.022 * dt60;
     if (pt.alpha <= 0) particles.splice(i, 1);
   }
 }
@@ -358,7 +360,15 @@ function draw() {
 }
 
 // ── Loop ──────────────────────────────────────────────────────────────────────
-function loop() { update(); draw(); requestAnimationFrame(loop); }
+let lastTs = 0;
+function loop(ts) {
+  // dt in seconds, capped at 100 ms to prevent a huge jump after tab switch
+  const dt   = lastTs ? Math.min((ts - lastTs) / 1000, 0.1) : 1 / 60;
+  lastTs = ts;
+  update(dt * 60);   // dt60 = 1.0 at 60 fps, 0.5 at 120 fps, 2.0 at 30 fps
+  draw();
+  requestAnimationFrame(loop);
+}
 
 function imgReady(img) {
   return new Promise(res => { img.onload = img.onerror = res; });
