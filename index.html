@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lime Jumper</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    #c {
+      filter: grayscale(1);
+      image-rendering: pixelated;
+      width: 800px;
+      max-width: 100vw;
+      height: auto;
+      aspect-ratio: 800 / 300;
+      cursor: pointer;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+<canvas id="c" width="800" height="300"></canvas>
+<script>
+'use strict';
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const W = 800, H = 300;
+const GY = H - 52;   // ground y
+
+// ── Sprites ──────────────────────────────────────────────────────────────────
+const limeImg   = new Image(); limeImg.src   = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEUAAABaCAYAAADuDZtnAAAACXBIWXMAAAsTAAALEwEAmpwYAAADmklEQVR4nO2cP4/TQBDFd5PjSCBIKEUIJQ3KIUBCaShSQE/JJwjNKS0tdNR0EV0+ABIVokRHY9GkQEKA0lyJ5IYUEOHwJ4NSeDVnxllvdu2keL9qfF7bq8c8ZrPetSYiVRVa65fs8FYaENGR2iNqu+7APgJRBDS3j9ZaBeITi28UaP+BxXfUDuA6IFMEIErJ9lnx+7L4ZxoQUTONe73eMo1ns9n5nGsrA/axAFEC2eeIxZ9ZbG5ERE4WyDx3wuJHqiJgHwsQJZB9KIRlOO12+3caz+fzc7x/qiJgHwsQxcM+fyQhfSyTR6YPT1n8TJUI7GMBojja5wWLj9MgjmPzG6fT6dRs1nOd2Ws0Gn/TeLlc1qr6B4R9LEAUR/uQVH2I6EC8Ebs21GR4pj8PWPxGBQb2sQBRBLJWOJYa5Vkm08bJSkXa1Go1c2K1Wr3mp1SJIFMEIEqB6rOSGuX9xikyYPOsSuYCffZh/F3SF9ebig9C9dkMRClgH7IN2EL9xnGFVyI6+7B6iPvDPhYgisCB1vrJtgM2jusrV1e7TadTY+d+v88nt4ODTBGAKALrnP/Gji+7DNiqXC+3oRL9Yqca294T1ccCRBFYVxizkMYVHWiNnKsNx+OxWQg0Go0uqMAgUwQgisA6/xN2fLjtdEEoirzG3dDmB4svbftcZIoARMmpPk5+oJIHbK72HA6Hxv6TyaQVog/IFAGIIrDO1e/s+GKI6uO6ji7URHfmWR9ZfNulD8gUAYgisM63E3Z8T2pU0p4gEZ/XrIPBwFSiKIr4NIK107CPBYji+N5n5/YJWIiesfi+7bnIFAGI4mifJA2ISJwQ9rGST5UpQrfbNZsg4ji2boKAfSxAlAL2+crOXXVJ9bItE7ASPWfxY+meyBQBiOKx4jrZthKVMfBztU+z2TSbIJIkETdBwD4WIIqjfWYsvi5d7FkFKns3tKEPD1n7V2mMTBGAKB67TVc5f9ehB3hF8Bng1et1vgmCtzcJgkwRgChlfutA7chKReD9WSwW5qDVavEOXUkDZIoARAlkn2ssPt3WSqGmIHyuzSw9NaUImSIAUXb0nbeExY1dr9bmRFFkVmsPBgOz3g+ZIgBRBJz29DgI/J7Fd6XGWmvRVhwfi234r4BvcDiUqicyRQCiVPiR3jxOcwaBefiUKO3yMWEiupnGyBQBiGKzzz6gtT7JqVxFdpialQZKqbdpQET8Kz1WkCkCEEX9zz+ypK4rbutUqwAAAABJRU5ErkJggg==';
+const bottleImg = new Image(); bottleImg.src = 'data:image/png;base64,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';
+const bgImg     = new Image(); bgImg.src     = 'data:image/png;base64,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IM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAECAOAMAAAgQZwAAAAHiDAAAIECcAQAABIgzAACAAHEGAAAQIM4AAAACxBkAAMDHfH8AY4fjkLPZf1sAAAAASUVORK5CYII=';
+const cloudImg  = new Image(); cloudImg.src  = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGwAAAAmCAYAAAAhpX7HAAAACXBIWXMAAAsTAAALEwEAmpwYAAAE8WlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgMTAuMC1jMDAwIDI1LkcuZDIwZTQ2NiwgMjAyNS8xMi8wOC0yMDo1MDoyMSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczpkYz0iaHR0cDovL3B1cmwub3JnL2RjL2VsZW1lbnRzLzEuMS8iIHhtbG5zOnBob3Rvc2hvcD0iaHR0cDovL25zLmFkb2JlLmNvbS9waG90b3Nob3AvMS4wLyIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0RXZ0PSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VFdmVudCMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDI3LjcgKFdpbmRvd3MpIiB4bXA6Q3JlYXRlRGF0ZT0iMjAyNi0wNi0wOVQxNjowMjo0OCswMTowMCIgeG1wOk1vZGlmeURhdGU9IjIwMjYtMDYtMDlUMTY6Mjc6MzkrMDE6MDAiIHhtcDpNZXRhZGF0YURhdGU9IjIwMjYtMDYtMDlUMTY6Mjc6MzkrMDE6MDAiIGRjOmZvcm1hdD0iaW1hZ2UvcG5nIiBwaG90b3Nob3A6Q29sb3JNb2RlPSIzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOmY5YTQxZjEwLWUyMmMtOTY0My04YjNjLTFhZjZjYjBhY2VhNCIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpmOWE0MWYxMC1lMjJjLTk2NDMtOGIzYy0xYWY2Y2IwYWNlYTQiIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDpmOWE0MWYxMC1lMjJjLTk2NDMtOGIzYy0xYWY2Y2IwYWNlYTQiPiA8eG1wTU06SGlzdG9yeT4gPHJkZjpTZXE+IDxyZGY6bGkgc3RFdnQ6YWN0aW9uPSJjcmVhdGVkIiBzdEV2dDppbnN0YW5jZUlEPSJ4bXAuaWlkOmY5YTQxZjEwLWUyMmMtOTY0My04YjNjLTFhZjZjYjBhY2VhNCIgc3RFdnQ6d2hlbj0iMjAyNi0wNi0wOVQxNjowMjo0OCswMTowMCIgc3RFdnQ6c29mdHdhcmVBZ2VudD0iQWRvYmUgUGhvdG9zaG9wIDI3LjcgKFdpbmRvd3MpIi8+IDwvcmRmOlNlcT4gPC94bXBNTTpIaXN0b3J5PiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PnqRfQ0AAAGYSURBVHic7ZlbjsMgDEVhNP2fTXj/C2Ip/fCo0kTjIFIwMQSn9/wkaaO8rg7mEZk5AD98Xf0AQAcCcwYCcwYCcwYCcwYCc8a34twYQmCxrZ2X/ya3r/+njSdSSm/vRUTbc90qsO2lWz60DCZmx+AEUTlwzu2Rx3lILJpdaVTNUFN7JES0O04pubNNW8NK4YSD/c0sLhyDSYY1X3d0MCkzK7en43ouTBvRSyw1k/k+mNDpaLVI1jCzunVUq+ikWfl1SnXtLoZxZ60DFxjWakzLuE0FGRnVaXScdX9rwzQBFF+8874fz5madoajEJdpOqk8ZuOWGjeyh3lVYCVYOxC2ZAviqMlraQpndFgw+euMUQPnLqRdVxf3HiqGmXRYYJgzhtSwM3XIo1m1Z7esbZaGoavuzDC2npC9GWwxwaw1LF85BosbJqea5HYHzNIvnI427N3iJVjEsMdfO/zsXZaozSZ8CvT/zVhbyzSB/YQQdmGBhWc6LHuAqy8SzkZjGGY6nLHUXCKoA8OcgcCcgcCcgcCcgcCCL34B3DGfuBVPEikAAAAASUVORK5CYII=';
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const PW = 39, PH = 39, PX = 90;   // player size & start x
+const BW = 30, BH = 90;            // bottle size
+const GRAV = 0.42, JV = -14.5;
+
+// ── Game state ────────────────────────────────────────────────────────────────
+let gs = 'idle';    // 'idle' | 'playing' | 'gameover'
+let score = 0, hi = 0, spd = 3, tick = 0, spawnIn = 120;
+let bgOffset = 0;
+
+const p = { x: PX, y: GY - PH, vy: 0, j: 2 };  // player
+
+let bottles   = [];
+let particles = [];
+let clouds    = [];
+
+// ── Clouds (cloud.png) ───────────────────────────────────────────────────────
+function mkCloud(x) {
+  const cw = 70 + Math.floor(Math.random() * 90);   // 70–160 px wide
+  const ch = cloudImg.naturalWidth > 0
+    ? Math.round(cloudImg.naturalHeight * cw / cloudImg.naturalWidth)
+    : Math.round(cw * 0.55);
+  return { x, y: 133 + Math.random() * 35, dx: 0.25 + Math.random() * 0.45, cw, ch };
+}
+
+function initClouds() {
+  clouds = [];
+  for (let i = 0; i < 5; i++) {
+    const c = mkCloud(i * 180 + 20);
+    // Ensure no overlap with previously placed clouds
+    let attempts = 0;
+    while (attempts++ < 20 && clouds.some(o => c.x < o.x + o.cw + 40 && c.x + c.cw > o.x - 40))
+      c.x = i * 180 + 20 + Math.random() * 60;
+    clouds.push(c);
+  }
+}
+
+function drawClouds() {
+  if (!cloudImg.naturalWidth) return;
+  for (const c of clouds)
+    ctx.drawImage(cloudImg, ~~c.x, ~~c.y, c.cw, c.ch);
+}
+
+// ── Particle burst ────────────────────────────────────────────────────────────
+function burst(cx, cy) {
+  for (let i = 0; i < 24; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const v = 1.5 + Math.random() * 4;
+    particles.push({
+      x: cx, y: cy,
+      vx: Math.cos(a) * v,
+      vy: Math.sin(a) * v - 1.5,
+      alpha: 1,
+      sz: 2 + Math.floor(Math.random() * 4),
+    });
+  }
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────────
+function doJump() {
+  if (gs !== 'playing') { startGame(); return; }
+  if (p.j > 0) { p.vy = JV; p.j--; }
+}
+
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); doJump(); }
+});
+canvas.addEventListener('pointerdown', e => { e.preventDefault(); doJump(); });
+
+// ── Game logic ────────────────────────────────────────────────────────────────
+function startGame() {
+  gs = 'playing'; score = 0; spd = 3; tick = 0; spawnIn = 120;
+  bottles = []; particles = [];
+  Object.assign(p, { x: PX, y: GY - PH, vy: 0, j: 2 });
+}
+
+function spawnBottles() {
+  bottles.push({ x: W + 20, y: GY - BH, bonus: false });
+  if (Math.random() < 0.28)
+    bottles.push({ x: W + 20 + BW + 24, y: GY - BH, bonus: false });
+}
+
+function update() {
+  // Background always scrolls; slower when not in play
+  bgOffset += gs === 'playing' ? spd : 1.5;
+
+  if (gs !== 'playing') return;
+
+  tick++;
+  spd   = Math.min(10, 3 + tick * 0.001);
+  score += spd * 0.01;
+
+  // Player physics
+  const prevBottom = p.y + PH;
+  p.vy += GRAV;
+  p.y  += p.vy;
+  if (p.y + PH >= GY) { p.y = GY - PH; p.vy = 0; p.j = 2; }
+
+  // Clouds scroll
+  for (const c of clouds) {
+    c.x -= c.dx;
+    if (c.x + c.cw < 0) {
+      const farthest = clouds.reduce((m, cl) => Math.max(m, cl.x + cl.cw), W);
+      Object.assign(c, mkCloud(farthest + 60 + Math.random() * 80));
+    }
+  }
+
+  // Obstacle spawn
+  if (--spawnIn <= 0) {
+    spawnBottles();
+    spawnIn = Math.max(55, 130 - tick * 0.02) + Math.random() * 60;
+  }
+
+  // Bottle updates + collision
+  for (let i = bottles.length - 1; i >= 0; i--) {
+    const b = bottles[i];
+    b.x -= spd;
+    if (b.x + BW < 0) { bottles.splice(i, 1); continue; }
+
+    // Inset hitboxes for fairness
+    const px = p.x + 5,  py = p.y + 5;
+    const pw = PW - 10,  ph = PH - 6;
+    const bx = b.x + 2,  by = b.y;
+    const bw = BW - 4;
+
+    if (px + pw > bx && px < bx + bw && py + ph > by && py < by + BH) {
+      if (p.vy >= 0 && prevBottom <= by + 10) {
+        // Landed on top of bottle
+        p.y = by - PH; p.vy = 0; p.j = 2;
+        if (!b.bonus) {
+          b.bonus = true;
+          score += 50;
+          burst(b.x + BW / 2, b.y);
+        }
+      } else {
+        // Side / under hit — game over
+        hi = Math.max(hi, ~~score);
+        gs = 'gameover';
+        return;
+      }
+    }
+  }
+
+  // Particle physics
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const pt = particles[i];
+    pt.x += pt.vx; pt.y += pt.vy;
+    pt.vy += 0.13;
+    pt.alpha -= 0.022;
+    if (pt.alpha <= 0) particles.splice(i, 1);
+  }
+}
+
+// ── Drawing ───────────────────────────────────────────────────────────────────
+function drawBackground() {
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, W, H);
+  if (!bgImg.naturalWidth) return;
+  const dh = H - 130;  // draw in lower portion only
+  const tw = Math.round(bgImg.naturalWidth * dh / bgImg.naturalHeight);
+  const startX = -(bgOffset % tw);
+  for (let x = startX; x < W; x += tw)
+    ctx.drawImage(bgImg, ~~x, 130, tw, dh);
+}
+
+
+function drawHUD() {
+  ctx.save();
+  ctx.font = '12px "Press Start 2P"';
+  ctx.textAlign = 'right';
+  const scStr = String(~~score).padStart(5, '0');
+  const hiStr = 'HI ' + String(~~hi).padStart(5, '0');
+  const scW   = ctx.measureText(scStr).width;
+  // Current score — darker
+  ctx.fillStyle = '#333';
+  ctx.fillText(scStr, W - 12, 28);
+  // HI label + hi score — lighter, offset left
+  ctx.fillStyle = '#aaa';
+  ctx.fillText(hiStr, W - 12 - scW - 18, 28);
+  ctx.restore();
+}
+
+function sprite(img, x, y, w, h, fallback) {
+  if (img.complete && img.naturalWidth > 0) {
+    ctx.drawImage(img, x, y, w, h);
+  } else {
+    ctx.fillStyle = fallback;
+    ctx.fillRect(x, y, w, h);
+  }
+}
+
+function drawScene() {
+  sprite(limeImg, p.x, p.y, PW, PH, '#555');
+  for (const b of bottles)
+    sprite(bottleImg, b.x, b.y, BW, BH, '#444');
+  for (const pt of particles) {
+    ctx.fillStyle = `rgba(20,20,20,${pt.alpha.toFixed(2)})`;
+    ctx.fillRect(~~pt.x, ~~pt.y, pt.sz, pt.sz);
+  }
+}
+
+function draw() {
+  drawBackground();
+
+  drawClouds();
+  drawHUD();
+
+  if (gs === 'idle') {
+    sprite(limeImg, p.x, p.y, PW, PH, '#555');
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#222';
+    ctx.font = '22px "Press Start 2P"';
+    ctx.fillText('LIME JUMPER', W / 2, GY / 2 - 8);
+    ctx.font = '8px "Press Start 2P"';
+    ctx.fillStyle = '#888';
+    ctx.fillText('PRESS SPACE OR TAP TO START', W / 2, GY / 2 + 20);
+    ctx.restore();
+    return;
+  }
+
+  drawScene();
+
+  if (gs === 'gameover') {
+    ctx.fillStyle = 'rgba(255,255,255,0.62)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#222';
+    ctx.font = '20px "Press Start 2P"';
+    ctx.fillText('GAME OVER', W / 2, GY / 2 - 8);
+    ctx.font = '8px "Press Start 2P"';
+    ctx.fillStyle = '#888';
+    ctx.fillText('PRESS SPACE OR TAP TO RESTART', W / 2, GY / 2 + 20);
+    ctx.restore();
+  }
+}
+
+// ── Loop ──────────────────────────────────────────────────────────────────────
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+
+function imgReady(img) {
+  return new Promise(res => { img.onload = img.onerror = res; });
+}
+
+Promise.all([
+  document.fonts.ready,
+  imgReady(limeImg),
+  imgReady(bottleImg),
+  imgReady(bgImg),
+  imgReady(cloudImg),
+]).then(() => {
+  initClouds();
+  loop();
+});
+</script>
+</body>
+</html>
