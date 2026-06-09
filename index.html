@@ -2,34 +2,90 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Lime Jumper</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: #fff;
+      background: #111;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
+      min-height: 100dvh;
       overflow: hidden;
+    }
+    #game-wrap {
+      position: relative;
+      /* shrink to fit width or height, whichever is tighter */
+      width: min(800px, 100vw, calc(100vh * 800 / 300));
     }
     #c {
       filter: grayscale(1);
       image-rendering: pixelated;
-      width: 800px;
-      max-width: 100vw;
+      width: 100%;
       height: auto;
       aspect-ratio: 800 / 300;
       cursor: pointer;
       display: block;
+      touch-action: none;   /* lets pointerdown fire without scroll delay */
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* Fullscreen button — bottom-right corner of canvas */
+    #fs-btn {
+      position: absolute;
+      bottom: 7px;
+      right: 7px;
+      width: 30px;
+      height: 30px;
+      background: rgba(0,0,0,0.38);
+      border: 1.5px solid rgba(255,255,255,0.55);
+      border-radius: 4px;
+      cursor: pointer;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+      padding: 0;
+      z-index: 10;
+    }
+    /* Two-corner expand icon drawn with pseudo-elements */
+    #fs-btn::before, #fs-btn::after {
+      content: '';
+      position: absolute;
+      width: 7px;
+      height: 7px;
+    }
+    #fs-btn::before {
+      top: 4px; left: 4px;
+      border-top: 2px solid #fff;
+      border-left: 2px solid #fff;
+    }
+    #fs-btn::after {
+      bottom: 4px; right: 4px;
+      border-bottom: 2px solid #fff;
+      border-right: 2px solid #fff;
+    }
+    /* Swap to collapse icon when fullscreen */
+    #fs-btn.fs-active::before {
+      top: 4px; left: 4px;
+      border-top: none; border-left: none;
+      border-bottom: 2px solid #fff;
+      border-right: 2px solid #fff;
+    }
+    #fs-btn.fs-active::after {
+      bottom: 4px; right: 4px;
+      border-bottom: none; border-right: none;
+      border-top: 2px solid #fff;
+      border-left: 2px solid #fff;
     }
   </style>
 </head>
 <body>
+<div id="game-wrap">
 <canvas id="c" width="800" height="300"></canvas>
+<button id="fs-btn" title="Toggle fullscreen" aria-label="Toggle fullscreen"></button>
+</div>
 <script>
 'use strict';
 
@@ -111,7 +167,25 @@ function doJump() {
 window.addEventListener('keydown', e => {
   if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); doJump(); }
 });
-canvas.addEventListener('pointerdown', e => { e.preventDefault(); doJump(); });
+
+// Touch: use touchstart (fires instantly, no 300ms delay) with passive:false
+// so preventDefault() suppresses scroll/zoom. pointerdown handles mouse.
+canvas.addEventListener('touchstart', e => { e.preventDefault(); doJump(); }, { passive: false });
+canvas.addEventListener('pointerdown', e => { if (e.pointerType !== 'touch') doJump(); });
+
+// ── Fullscreen ────────────────────────────────────────────────────────────────
+const fsBtn = document.getElementById('fs-btn');
+fsBtn.addEventListener('pointerdown', e => {
+  e.stopPropagation();  // don't let this bubble to canvas jump handler
+  const el = document.documentElement;
+  if (!document.fullscreenElement) {
+    (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el);
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen || (() => {})).call(document);
+  }
+});
+document.addEventListener('fullscreenchange',       () => fsBtn.classList.toggle('fs-active', !!document.fullscreenElement));
+document.addEventListener('webkitfullscreenchange', () => fsBtn.classList.toggle('fs-active', !!document.webkitFullscreenElement));
 
 // ── Game logic ────────────────────────────────────────────────────────────────
 function startGame() {
