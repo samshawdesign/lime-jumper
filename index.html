@@ -105,14 +105,14 @@ const cloudImg  = new Image(); cloudImg.src  = 'data:image/png;base64,iVBORw0KGg
 // ── Constants ─────────────────────────────────────────────────────────────────
 const PW = 39, PH = 39, PX = 90;   // player size & start x
 const BW = 30, BH = 114;           // bottle size (natural: 72×274 at width 30)
-const GRAV_UP = 0.40, GRAV_DOWN = 0.15, JV = -12;
+const GRAV_UP = 0.55, GRAV_DOWN = 0.28, JV = -14;
 
 // ── Game state ────────────────────────────────────────────────────────────────
 let gs = 'idle';    // 'idle' | 'playing' | 'gameover'
-let score = 0, hi = 0, spd = 4, tick = 0, spawnIn = 100;
+let score = 0, hi = 0, spd = 5, tick = 0, spawnIn = 50;
 let bgOffset = 0;
 
-const p = { x: PX, y: GY - PH, vy: 0, j: 2 };  // player
+const p = { x: PX, y: GY - PH, vy: 0, j: 1 };  // player
 
 let bottles   = [];
 let particles = [];
@@ -192,7 +192,7 @@ document.addEventListener('webkitfullscreenchange', () => fsBtn.classList.toggle
 
 // ── Game logic ────────────────────────────────────────────────────────────────
 function startGame() {
-  gs = 'playing'; score = 0; spd = 4; tick = 0; spawnIn = 100;
+  gs = 'playing'; score = 0; spd = 5; tick = 0; spawnIn = 50;
   bottles = []; particles = []; labels = [];
   Object.assign(p, { x: PX, y: GY - PH, vy: 0, j: 2 });
 }
@@ -210,7 +210,7 @@ function update(dt60) {
   if (gs !== 'playing') return;
 
   tick  += dt60;
-  spd    = Math.min(12, 4 + tick * 0.0006);
+  spd    = 5 + Math.floor(tick / 360);
   score += spd * 0.01 * dt60;
 
   // Player physics
@@ -218,7 +218,7 @@ function update(dt60) {
   p.vy += (p.vy < 0 ? GRAV_UP : GRAV_DOWN) * dt60;
   p.y  += p.vy  * dt60;
   if (p.y < 0)         { p.y = 0;       p.vy = 0; }
-  if (p.y + PH >= GY)  { p.y = GY - PH; p.vy = 0; p.j = 2; }
+  if (p.y + PH >= GY)  { p.y = GY - PH; p.vy = 0; p.j = 1; }
 
   // Clouds scroll
   for (const c of clouds) {
@@ -233,7 +233,7 @@ function update(dt60) {
   spawnIn -= dt60;
   if (spawnIn <= 0) {
     spawnBottles();
-    spawnIn = Math.max(55, 130 - tick * 0.015) + Math.random() * 55;
+    spawnIn = Math.max(45, 95 - tick * 0.025) + Math.random() * 40;
   }
 
   // Bottle updates + collision
@@ -251,7 +251,7 @@ function update(dt60) {
     if (px + pw > bx && px < bx + bw && py + ph > by && py < by + BH) {
       if (p.vy >= 0 && prevBottom <= by + 10) {
         // Landed on top of bottle
-        p.y = by - PH; p.vy = 0; p.j = 2;
+        p.y = by - PH; p.vy = 0; p.j = 1;
         if (!b.bonus) {
           b.bonus = true;
           b.hasLime = true;
@@ -368,9 +368,10 @@ function draw() {
     ctx.fillStyle = '#222';
     ctx.font = '22px "Press Start 2P"';
     ctx.fillText('LIME JUMPER', W / 2, GY / 2 - 8);
-    ctx.font = '8px "Press Start 2P"';
+    ctx.font = '10px "Press Start 2P"';
     ctx.fillStyle = '#888';
-    ctx.fillText('PRESS SPACE OR TAP TO START', W / 2, GY / 2 + 20);
+    ctx.fillText('Get the lime in the Corona to score points.', W / 2, GY / 2 + 20);
+    ctx.fillText('Press space to jump.', W / 2, GY / 2 + 40);
     ctx.restore();
     return;
   }
